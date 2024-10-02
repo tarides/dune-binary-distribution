@@ -16,12 +16,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-            name: x86_64-apple-darwin
-            installable: .#dune-experimental
-          - os: macos-14
-            name: aarch64-apple-darwin
-            installable: .#dune-experimental
+          # - os: macos-13
+          #   name: x86_64-apple-darwin
+          #   installable: .#dune-experimental
+          # - os: macos-14
+          #   name: aarch64-apple-darwin
+          #   installable: .#dune-experimental
           - os: ubuntu-22.04
             name: x86_64-unknown-linux-musl
             installable: .#dune-static-experimental
@@ -76,7 +76,8 @@ jobs:
           cp result/bin/dune ~/build/$ARCHIVE_DIR
           cp result/bin/dune ~/build/
           tar --format=posix -cvf ~/build/$ARCHIVE_TAR -C ~/build $ARCHIVE_DIR
-          gzip -9 "~/build/$ARCHIVE_TAR"
+          ls ~/build
+          gzip -9 ~/build/$ARCHIVE_TAR
           rm -rf ~/build/$ARCHIVE_DIR
 
       - uses: actions/upload-artifact@v4
