@@ -69,8 +69,6 @@ jobs:
           path: ~/build/*
           name: ${{ matrix.name }}
 
-
-
   check-artifacts:
     strategy:
         fail-fast: false
@@ -103,6 +101,35 @@ jobs:
             cd test
             dune pkg lock
             dune build
+
+  build_with_dune:
+    needs: binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /home/runner/artifacts
+
+      - name: Add Dune to path
+        run: |
+          mkdir -p $HOME/.local/bin
+          cp $HOME/artifacts/x86_64-unknown-linux-musl/dune $HOME/.local/bin/
+          chmod u+x $HOME/.local/bin/dune
+
+      - name: Check Dune version
+        run: dune --version
+
+      - name: Move artifacts to scope
+        run: mv "/home/runner/artifacts" "."
+
+      - name: Locking file
+        run: cd sandworm && dune pkg lock
+
+      - name: Building the project
+        run: cd sandworm && dune build
 
 
 
