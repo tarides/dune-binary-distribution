@@ -99,6 +99,9 @@ mv "$tmp_exe" "$exe" ||
 rm -rf "$install_dir/env" && mv "$tmp_tar_dir/env" "$install_dir" ||
     error "Failed to move env from $tmp_tar_dir to $install_dir"
 
+rm -rf "$install_dir/completions" && mv "$tmp_tar_dir/completions" "$install_dir" ||
+    error "Failed to move completions from $tmp_tar_dir to $install_dir"
+
 success "dune $target was installed successfully to $Bold_Green$(tildify "$exe")"
 
 echo
