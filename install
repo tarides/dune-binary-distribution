@@ -96,73 +96,67 @@ tar -xf "$tmp_tar" -C "$tmp_dir" 2>&1 > /dev/null ||
 mv "$tmp_exe" "$exe" ||
     error "Failed to move executable from $tmp_exe to $exe"
 
+rm -rf "$install_dir/env" && mv "$tmp_tar_dir/env" "$install_dir" ||
+    error "Failed to move env from $tmp_tar_dir to $install_dir"
+
+rm -rf "$install_dir/completions" && mv "$tmp_tar_dir/completions" "$install_dir" ||
+    error "Failed to move completions from $tmp_tar_dir to $install_dir"
+
 success "dune $target was installed successfully to $Bold_Green$(tildify "$exe")"
 
 echo
 
 case $(basename "$SHELL") in
 fish)
-    commands=(
-        "set --export PATH $bin_dir \$PATH"
-    )
+    env_file="\$HOME/.dune/env/env.fish"
 
     fish_config=$HOME/.config/fish/config.fish
     tilde_fish_config=$(tildify "$fish_config")
 
-    if [[ -w $fish_config ]]; then
+    # deliberately omit the home directory from the pattern so "~" and "$HOME" can be used interchangeably
+    if [ -f "$fish_config" ] && match=$(grep -n ".dune/env/env.fish" $fish_config); then
+        echo "Shell configuration for dune appears to already exist in \"$fish_config\":"
+        echo "$match"
+        refresh_command="source $tilde_fish_config"
+    elif [[ -w $fish_config ]]; then
         {
             echo -e '\n# dune'
-
-            for command in "${commands[@]}"; do
-                echo "$command"
-            done
+            echo "source $env_file"
         } >>"$fish_config"
 
-        info "Added \"$tilde_bin_dir\" to \$PATH in \"$tilde_fish_config\""
+        info "Sourced \"$env_file\" in \"$tilde_fish_config\""
 
         refresh_command="source $tilde_fish_config"
     else
-        echo "Manually add the directory to $tilde_fish_config (or similar):"
-
-        for command in "${commands[@]}"; do
-            info_bold "  $command"
-        done
+        echo "Manually source the file \"$env_file\""
     fi
     ;;
 zsh)
-
-    commands=(
-        "export PATH=\"$bin_dir:\$PATH\""
-    )
+    env_file="\$HOME/.dune/env/env.zsh"
 
     zsh_config=$HOME/.zshrc
     tilde_zsh_config=$(tildify "$zsh_config")
 
-    if [[ -w $zsh_config ]]; then
+    # deliberately omit the home directory from the pattern so "~" and "$HOME" can be used interchangeably
+    if [ -f "$zsh_config" ] && match=$(grep -n ".dune/env/env.zsh" $zsh_config); then
+        echo "Shell configuration for dune appears to already exist in \"$zsh_config\":"
+        echo "$match"
+        refresh_command="exec $SHELL"
+    elif [[ -w $zsh_config ]]; then
         {
             echo -e '\n# dune'
-
-            for command in "${commands[@]}"; do
-                echo "$command"
-            done
+            echo "source $env_file"
         } >>"$zsh_config"
 
-        info "Added \"$tilde_bin_dir\" to \$PATH in \"$tilde_zsh_config\""
+        info "Sourced \"$env_file\" in \"$tilde_zsh_config\""
 
         refresh_command="exec $SHELL"
     else
-        echo "Manually add the directory to $tilde_zsh_config (or similar):"
-
-        for command in "${commands[@]}"; do
-            info_bold "  $command"
-        done
+        echo "Manually source the file \"$env_file\" in \"$tilde_zsh_config\""
     fi
     ;;
 bash)
-
-    commands=(
-        "export PATH=$bin_dir:\$PATH"
-    )
+    env_file="\$HOME/.dune/env/env.bash"
 
     bash_configs=(
         "$HOME/.bashrc"
@@ -178,38 +172,44 @@ bash)
         )
     fi
 
-    set_manually=true
+    already_configured=false
     for bash_config in "${bash_configs[@]}"; do
-        tilde_bash_config=$(tildify "$bash_config")
-
-        if [[ -w $bash_config ]]; then
-            {
-                echo -e '\n# dune'
-
-                for command in "${commands[@]}"; do
-                    echo "$command"
-                done
-            } >>"$bash_config"
-
-            info "Added \"$tilde_bin_dir\" to \$PATH in \"$tilde_bash_config\""
-
-            refresh_command="source $bash_config"
+        # deliberately omit the home directory from the pattern so "~" and "$HOME" can be used interchangeably
+        if [ -f "$bash_config" ] && match=$(grep -n ".dune/env/env.bash" $bash_config); then
             set_manually=false
+            echo "Shell configuration for dune appears to already exist in \"$bash_config\":"
+            echo "$match"
+            refresh_command="source $bash_config"
+            already_configured=true
             break
         fi
     done
+    if [ "$already_configured" = false ]; then
+        set_manually=true
+        for bash_config in "${bash_configs[@]}"; do
+            tilde_bash_config=$(tildify "$bash_config")
 
-    if [[ $set_manually = true ]]; then
-        echo "Manually add the directory to $tilde_bash_config (or similar):"
+            if [[ -w $bash_config ]]; then
+                {
+                    echo -e '\n# dune'
+                    echo "source $env_file"
+                } >>"$bash_config"
 
-        for command in "${commands[@]}"; do
-            info_bold "  $command"
+                info "Sourced \"$env_file\" in \"$tilde_bash_config\""
+
+                refresh_command="source $bash_config"
+                set_manually=false
+                break
+            fi
         done
+
+        if [[ $set_manually = true ]]; then
+            echo "Manually source the file \"$env_file\" in \"$tilde_bash_config\""
+        fi
     fi
     ;;
 *)
-    echo 'Manually add the directory to ~/.bashrc (or similar):'
-    info_bold "  export PATH=\"$bin_dir:\$PATH\""
+    echo 'Manually source the appropriate file in $HOME/.dune/env in your shell config (e.g. ~/.bashrc)'
     ;;
 esac
 
